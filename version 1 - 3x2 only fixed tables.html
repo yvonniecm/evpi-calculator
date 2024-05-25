@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVPI Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        input {
+            width: 80px;
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        h3 {
+            margin-top: 20px;
+            color: #333;
+        }
+
+        #tableContainer {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        #results {
+            display: none;
+            margin-top: 20px;
+        }
+
+        p {
+            font-size: 18px;
+            color: #333;
+        }
+
+        strong {
+            font-weight: bold;
+        }
+
+        button.reset {
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button.reset:hover {
+            background-color: #d32f2f;
+        }
+        footer {
+            margin-top: 40px;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>EVPI Calculator</h2>
+
+    <div id="tableContainer">
+
+        <h3>Enter Payoff Matrix and Probabilities:</h3>
+
+        <table id="payoffTable"></table>
+
+        <button type="button" onclick="calculateResults()">CALCULATE</button>
+
+    </div>
+
+
+    <div id="tableContainer" style="display: none;">
+        <h3>Enter Payoff Matrix and Probabilities:</h3>
+        <table id="payoffTable"></table>
+        <button type="button" onclick="calculateResults()">CALCULATE</button>
+        
+    </div>
+
+    <div id="results">
+        <h3>Results:</h3>
+        <p id="evgpiResult"></p>
+        <p id="evwpiResult"></p>
+        <p id="evpiResult"></p>
+        
+        <button type="button" class="reset" onclick="resetForm()">RESET</button> 
+    </div>
+
+
+
+    <script>
+         document.addEventListener("DOMContentLoaded", function () {
+            createTable();
+        });
+
+        function createTable() {
+            // Fixed values for a 3x2 table
+            var numAlternatives = 3;
+            var numStates = 2;
+
+            // Generate the table for entering values
+            var tableHtml = '<tr><th></th>';
+            for (var i = 1; i <= numStates; i++) {
+                tableHtml += '<th>States ' + i + '</th>';
+            }
+            tableHtml += '</tr>';
+
+            for (var j = 1; j <= numAlternatives; j++) {
+                tableHtml += '<tr><td>Alternatives ' + j + '</td>';
+                for (var k = 1; k <= numStates; k++) {
+                    tableHtml += '<td><input type="number" id="alt' + j + 'state' + k + '" min="0"></td>';
+                }
+                tableHtml += '</tr>';
+            }
+
+            tableHtml += '<tr><td>Probabilities</td>';
+            for (var l = 1; l <= numStates; l++) {
+                tableHtml += '<td><input type="number" id="probState' + l + '" min="0" max="1" step="0.01"></td>';
+            }
+            tableHtml += '</tr>';
+
+            document.getElementById('payoffTable').innerHTML = tableHtml;
+
+            // Show the table container
+            document.getElementById('tableContainer').style.display = 'block';
+        }
+                
+        function calculateResults() {
+        var numAlternatives = 2;
+        var numStates = 2;
+
+        var payoffMatrix = [];
+
+        for (var i = 1; i <= numAlternatives; i++) {
+            payoffMatrix.push([]);
+            for (var j = 1; j <= numStates; j++) {
+                var value = parseFloat(document.getElementById('alt' + i + 'state' + j).value);
+                payoffMatrix[i - 1].push(value);
+            }
+        }
+
+        var probabilities = [];
+
+        for (var k = 1; k <= numStates; k++) {
+            var probability = parseFloat(document.getElementById('probState' + k).value);
+            probabilities.push(probability);
+        }
+
+        // Calculate the EVGPI, EVWPI, and EVPI
+        var EVGPI = calculate_EVGPI(payoffMatrix, probabilities);
+        var EVWPI = calculate_EVWPI(payoffMatrix, probabilities);
+        var EVPI = calculate_EVPI(EVGPI, EVWPI);
+
+        // Display the results
+        var evgpiResult = "Expected Value Given Perfect Information (EVGPI): ";
+        var evwpiResult = "Expected Value Without Perfect Information (EVWPI): ";
+        var evpiResult = "Expected Value of Perfect Information (EVPI): ";
+
+        for (var i = 0; i < probabilities.length; i++) {
+            var maxUnderState = Math.max(...payoffMatrix.map(row => row[i]));
+            evgpiResult += "(" + maxUnderState.toLocaleString() + " * " + probabilities[i] + ")";
+            evwpiResult += "(" + (i === 0 ? maxUnderState : Math.min(...payoffMatrix.map(row => row[i]))).toLocaleString() + " * " + probabilities[i] + ")";
+
+            if (i < probabilities.length - 1) {
+                evgpiResult += " + ";
+                evwpiResult += " + ";
+            }
+        }
+
+        evgpiResult += " = <strong>" + EVGPI.toLocaleString() + "</strong>";
+        evwpiResult += " = <strong>" + EVWPI.toLocaleString() + "</strong>";
+        evpiResult += " (" + EVGPI.toLocaleString() + ") - (" + EVWPI.toLocaleString() + ") = <strong>" + (EVPI).toLocaleString() + "</strong>";
+
+        document.getElementById('evgpiResult').innerHTML = evgpiResult;
+        document.getElementById('evwpiResult').innerHTML = evwpiResult;
+        document.getElementById('evpiResult').innerHTML = evpiResult;
+
+        // Show the results div
+        document.getElementById('results').style.display = 'block';
+    }
+
+
+
+        function calculate_EVGPI(payoffMatrix, probabilities) {
+            
+            var expectedValues = [];
+
+            for (var i = 0; i < payoffMatrix[0].length; i++) {
+                var maxPayoff = 0;
+
+                for (var j = 0; j < payoffMatrix.length; j++) {
+                    maxPayoff = Math.max(maxPayoff, payoffMatrix[j][i]);
+                }
+
+                expectedValues.push(maxPayoff * probabilities[i]);
+            }
+
+            return expectedValues.reduce((a, b) => a + b, 0);
+        }
+
+        function calculate_EVWPI(payoffMatrix, probabilities) {
+     
+            var expectedValues = [];
+
+            for (var i = 0; i < payoffMatrix.length; i++) {
+                var expectedValue = 0;
+
+                for (var j = 0; j < payoffMatrix[0].length; j++) {
+                    expectedValue += payoffMatrix[i][j] * probabilities[j];
+                }
+
+                expectedValues.push(expectedValue);
+            }
+
+            return Math.max(...expectedValues);
+        }
+
+        function calculate_EVPI(EVGPI, EVWPI) {
+      
+            return EVGPI - EVWPI;
+        }
+
+        function resetForm() {
+        var numAlternatives = 3;
+        var numStates = 2;
+
+        // Clear the values in the matrix table
+        for (var i = 1; i <= numAlternatives; i++) {
+            for (var j = 1; j <= numStates; j++) {
+                document.getElementById('alt' + i + 'state' + j).value = '';
+            }
+        }
+
+        // Clear the values in the probabilities table
+        for (var k = 1; k <= numStates; k++) {
+            document.getElementById('probState' + k).value = '';
+        }
+
+        // Hide the results div
+        document.getElementById('results').style.display = 'none';
+    }
+
+
+        
+    </script>
+
+</body>
+</html>
